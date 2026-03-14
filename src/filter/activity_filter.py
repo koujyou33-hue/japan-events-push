@@ -129,7 +129,7 @@ class ActivityFilter:
 
         策略：
         - 提取文本中所有可解析的日期，取最晚（最新）的一个来判断
-        - 只有当"最晚的日期"也已超过3天，才认为活动过期
+        - 只有当"最晚的日期"早于今天，才认为活动过期（今天及以后的活动保留）
         - 无法解析任何日期时，默认为有效（不丢弃）
 
         Args:
@@ -143,7 +143,8 @@ class ActivityFilter:
             return False
 
         now = datetime.now()
-        cutoff = now - timedelta(days=3)
+        # 今天零点：今天及以后的活动保留，昨天及更早的视为过期
+        today = datetime(now.year, now.month, now.day)
         candidates = []
 
         # 模式1：年月日（优先级高）
@@ -162,8 +163,8 @@ class ActivityFilter:
                 if 1 <= mo <= 12 and 1 <= d <= 31:
                     # 先假设今年
                     dt_this = datetime(now.year, mo, d)
-                    # 若今年的日期已过去超过3天，再试明年
-                    if dt_this < cutoff:
+                    # 若今年的日期已过去，再试明年（可能是明年的活动）
+                    if dt_this < today:
                         dt_next = datetime(now.year + 1, mo, d)
                         candidates.append(dt_next)
                     else:
@@ -174,9 +175,9 @@ class ActivityFilter:
         if not candidates:
             return False  # 无日期信息，保留
 
-        # 取所有候选日期中最晚的一个
+        # 取所有候选日期中最晚的一个，如果仍早于今天则过期
         latest = max(candidates)
-        return latest < cutoff
+        return latest < today
 
     def is_duplicate(self, activity: Dict) -> bool:
         """
