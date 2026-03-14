@@ -98,11 +98,16 @@ class WebsiteFetcher:
     # 路径1：百度搜索（中文关键词为主）
     # ----------------------------------------------------------------
     def search_baidu(self, keyword: str, max_count: int = 8) -> List[Dict]:
-        """百度搜索"""
+        """百度搜索（限定近3个月结果）"""
         results = []
         try:
             url = "https://www.baidu.com/s"
-            params = {"wd": keyword, "rn": 10, "pn": 0}
+            params = {
+                "wd": keyword,
+                "rn": 10,
+                "pn": 0,
+                "tbs": "qdr:m3",   # 只返回最近3个月内的结果
+            }
             resp = requests.get(
                 url, params=params,
                 headers=_make_headers("https://www.baidu.com/"),
@@ -160,11 +165,16 @@ class WebsiteFetcher:
     # 路径2：搜狗微信搜索（公众号文章，中文）
     # ----------------------------------------------------------------
     def search_sogou_weixin(self, keyword: str, max_count: int = 8) -> List[Dict]:
-        """搜狗微信搜索 —— 专门搜公众号文章"""
+        """搜狗微信搜索（限定近3个月文章）"""
         results = []
         try:
             url = "https://weixin.sogou.com/weixin"
-            params = {"query": keyword, "type": 2, "page": 1}
+            params = {
+                "query": keyword,
+                "type": 2,
+                "page": 1,
+                "tsn": 3,   # 时间过滤：3=近3个月
+            }
             resp = requests.get(
                 url, params=params,
                 headers=_make_headers("https://weixin.sogou.com/"),
@@ -220,11 +230,15 @@ class WebsiteFetcher:
     # 路径3：必应搜索（英文/日文关键词为主）
     # ----------------------------------------------------------------
     def search_bing(self, keyword: str, max_count: int = 8) -> List[Dict]:
-        """必应搜索 —— 英文/日文关键词效果更好"""
+        """必应搜索（限定近3个月结果）"""
         results = []
         try:
             url = "https://www.bing.com/search"
-            params = {"q": keyword, "count": 10}
+            params = {
+                "q": keyword,
+                "count": 10,
+                "filters": "ex1%3a%22ez3%22",  # 近3个月时间过滤
+            }
             resp = requests.get(
                 url, params=params,
                 headers=_make_headers("https://www.bing.com/"),
