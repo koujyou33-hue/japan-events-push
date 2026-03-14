@@ -20,12 +20,10 @@ class ActivityFilter:
     def __init__(self, data_file: Path = None):
         if data_file is None:
             data_file = config.DATA_DIR / "activities.json"
-
         self.data_file = data_file
         self.history = self._load_history()
 
     def _load_history(self) -> Dict:
-        """加载历史活动记录"""
         if self.data_file.exists():
             try:
                 with open(self.data_file, "r", encoding="utf-8") as f:
@@ -35,7 +33,6 @@ class ActivityFilter:
         return {"activities": [], "last_update": ""}
 
     def _save_history(self):
-        """保存历史活动记录"""
         self.history["last_update"] = datetime.now().isoformat()
         try:
             with open(self.data_file, "w", encoding="utf-8") as f:
@@ -63,21 +60,6 @@ class ActivityFilter:
                 return True
         return False
 
-    def is_beijing_or_online(self, text: str) -> bool:
-        """判断活动是否为北京线下或线上参与"""
-        if not config.ONLY_BEIJING_ONLINE:
-            return True
-        if not text:
-            return False
-        text = text.lower()
-        for city in config.OFFLINE_CITIES:
-            if city.lower() in text:
-                return True
-        for keyword in config.ONLINE_KEYWORDS:
-            if keyword.lower() in text:
-                return True
-        return False
-
     def is_online(self, text: str) -> bool:
         """判断是否为线上活动"""
         if not text:
@@ -89,11 +71,7 @@ class ActivityFilter:
         return False
 
     def is_research_method_related(self, text: str) -> bool:
-        """
-        判断内容是否与研究方法/学术方法论相关
-
-        含研究方法词的讲座不要求与日本/东亚相关，直接通过主题筛选
-        """
+        """判断内容是否与研究方法/学术方法论相关"""
         if not text:
             return False
         text_lower = text.lower()
@@ -103,10 +81,7 @@ class ActivityFilter:
         return False
 
     def is_trusted_source(self, activity: Dict) -> bool:
-        """
-        判断是否来自重点关注的账号
-        重点账号的文章不强制要求含"北京"地点信息
-        """
+        """判断是否来自重点关注的账号"""
         source = activity.get("source", "")
         for trusted in config.TRUSTED_SOURCES:
             if trusted in source:
@@ -114,37 +89,40 @@ class ActivityFilter:
         return False
 
     def is_expired(self, activity: Dict) -> bool:
-        """判断活动是否已过期"""
+        """判断活动是否已过期（超过7天）"""
         text = activity.get("description", "") + activity.get("title", "")
         if not text:
             return False
 
-        date_patterns = [
-            r"(\d{1,2})[月\-/](\d{1,2})",
-            r"(\d{4})[月\-/](\d{1,2})[月\-/](\d{1,2})",
-        ]
-
         now = datetime.now()
+        cutoff = now - timedelta(days=7)
 
-        for pattern in date_patterns:
-            matches = re.findall(pattern, text)
-            for match in matches:
-                try:
-                    if len(match) == 2:
-                        month, day = int(match[0]), int(match[1])
-                        year = now.year
-                        if month < now.month or (month == now.month and day < now.day):
-                            year += 1
-                        activity_date = datetime(year, month, day)
-                    else:
-                        year, month, day = int(match[0]), int(match[1]), int(match[2])
-                        activity_date = datetime(year, month, day)
-
-                    if activity_date < (now - timedelta(days=3)):
+        # 匹配 年月日
+        for m in re.findall(r"(\d{4})[年\-/.](\d{1,2})[月\-/.](\d{1,2})", text):
+            try:
+                y, mo, d = int(m[0]), int(m[1]), int(m[2])
+                if 2020 <= y <= 2030:
+                    if datetime(y, mo, d) < cutoff:
                         return True
+            except Exception:
+                pass
 
-                except Exception:
-                    continue
+        # 匹配 月日（无年份）
+        for m in re.findall(r"(\d{1,2})[月](\d{1,2})[日号]", text):
+            try:
+                mo, d = int(m[0]), int(m[1])
+                if 1 <= mo <= 12 and 1 <= d <= 31:
+                    dt = datetime(now.year, mo, d)
+                    if dt < cutoff:
+                        try:
+                            dt_next = datetime(now.year + 1, mo, d)
+                            if dt_next > now:
+                                return False
+                        except Exception:
+                            pass
+                        return True
+            except Exception:
+                pass
 
         return False
 
@@ -153,7 +131,6 @@ class ActivityFilter:
         title = activity.get("title", "")
         if not title:
             return False
-
         for old_activity in self.history.get("activities", []):
             old_title = old_activity.get("title", "")
             if self._similarity(title, old_title) > 0.8:
@@ -161,17 +138,14 @@ class ActivityFilter:
                 if fetch_time:
                     try:
                         fetch_date = datetime.fromisoformat(fetch_time)
-                        days_diff = (datetime.now() - fetch_date).days
-                        if days_diff < config.DEDUP_DAYS:
+                        if (datetime.now() - fetch_date).days < config.DEDUP_DAYS:
                             return True
                     except Exception:
                         pass
-
         return False
 
     @staticmethod
     def _similarity(s1: str, s2: str) -> float:
-        """计算两个字符串的相似度"""
         if not s1 or not s2:
             return 0.0
         s1_set = set(s1)
@@ -184,23 +158,19 @@ class ActivityFilter:
         """
         筛选符合条件的活动
 
-        筛选逻辑（4条路径，满足任一即通过）：
+        筛选逻辑（3条路径，满足任一即通过）：
 
-        路径A — 日本/东亚相关 + 线上：
-            含日本词 AND 含活动词 AND 含线上词
-            → 线上讲座不限地点，全球均可
+        路径A — 日本/东亚相关讲座（不限任何地点）：
+            含日本词 AND 含活动词
+            → 线上线下均可，全国/全球皆推
 
-        路径B — 日本/东亚相关 + 北京线下：
-            含日本词 AND 含活动词 AND 含"北京"
-            → 北京线下日本相关活动
-
-        路径C — 研究方法讲座（不要求日本相关）：
+        路径B — 研究方法讲座（不要求日本相关）：
             含研究方法词 AND 含活动词 AND (线上 OR 北京)
-            → 方法论/学术写作讲座，不限主题
+            → 方法论/学术写作讲座，限线上或北京
 
-        路径D — 重点账号文章：
-            来自信任来源 AND 含日本词 AND 含活动词
-            → 东亚视界等重点账号，不限地点
+        路径C — 重点账号文章（来源可信，直接通过）：
+            来自信任来源 AND 含活动词
+            → 东亚视界、谓无名等，不限主题和地点
         """
         filtered = []
 
@@ -223,23 +193,18 @@ class ActivityFilter:
             is_research = self.is_research_method_related(text)
             is_trusted  = self.is_trusted_source(activity)
 
-            # 路径A：日本相关 + 线上 → 通过
-            if is_japan and is_online:
+            # 路径A：日本相关 → 直接通过，完全不限地点
+            if is_japan:
                 filtered.append(activity)
                 continue
 
-            # 路径B：日本相关 + 北京线下 → 通过
-            if is_japan and is_beijing:
-                filtered.append(activity)
-                continue
-
-            # 路径C：研究方法讲座 + 线上或北京 → 通过（不要求日本相关）
+            # 路径B：研究方法讲座 + 线上或北京 → 通过
             if is_research and (is_online or is_beijing):
                 filtered.append(activity)
                 continue
 
-            # 路径D：重点账号 + 日本相关 → 通过（不限地点）
-            if is_trusted and is_japan:
+            # 路径C：重点账号 → 直接通过
+            if is_trusted:
                 filtered.append(activity)
                 continue
 
@@ -249,7 +214,6 @@ class ActivityFilter:
         """将活动添加到历史记录"""
         if "activities" not in self.history:
             self.history["activities"] = []
-
         self.history["activities"].extend(activities)
 
         # 清理超过30天的历史
@@ -259,36 +223,29 @@ class ActivityFilter:
             if a.get("fetch_time")
             and datetime.fromisoformat(a["fetch_time"]) > cutoff_date
         ]
-
         self._save_history()
 
 
 def test_filter():
-    """测试筛选器"""
     test_activities = [
         {
-            "title": "【北京】日本文化讲座 - 带你了解日本茶道",
-            "description": "时间：2026年4月20日 地点：北京朝阳区 报名链接：...",
-            "source": "公众号"
+            "title": "日本文学讲座：村上春树与当代日本",
+            "description": "线上直播 2026年4月20日 免费报名",
+            "source": "搜狗微信"
         },
         {
-            "title": "日本留学分享会 - 申请日本名校",
-            "description": "线上直播 时间：本周六",
-            "source": "小红书"
+            "title": "Japan History Seminar: Meiji Restoration",
+            "description": "Online event, April 2026, free registration",
+            "source": "必应·eventbrite.com"
         },
         {
             "title": "质性研究方法论工作坊",
             "description": "腾讯会议 线上 免费报名 2026年4月",
-            "source": "网站"
+            "source": "百度搜索"
         },
         {
-            "title": "学术写作与期刊投稿技巧讲座",
-            "description": "北京大学 现场参与 2026年4月",
-            "source": "网站"
-        },
-        {
-            "title": "上海日本料理节",
-            "description": "上海展览馆",
+            "title": "日本料理节",
+            "description": "上海展览馆 已结束 2026年1月",
             "source": "活动行"
         },
     ]
@@ -296,11 +253,9 @@ def test_filter():
     filter_engine = ActivityFilter()
     filtered = filter_engine.filter_activities(test_activities)
 
-    print(f"原始活动数: {len(test_activities)}")
-    print(f"筛选后活动数: {len(filtered)}")
-    for activity in filtered:
-        print(f"\n✓ {activity['title']}")
-        print(f"  来源: {activity['source']}")
+    print(f"原始: {len(test_activities)} 条  筛选后: {len(filtered)} 条\n")
+    for a in filtered:
+        print(f"✓ [{a['source']}] {a['title']}")
 
 
 if __name__ == "__main__":
