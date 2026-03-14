@@ -18,29 +18,24 @@ PUSH_TIMES = [8, 16]
 # ============ 关键词配置 ============
 
 # 日本/东亚相关关键词（满足任一即匹配）
-# 聚焦学术、文化、人文方向
 JAPAN_KEYWORDS = [
-    # 国家/地区
     "日本", "东亚", "东京", "日本文化", "日本历史", "日本思想",
     "日本文学", "日本社会", "日本政治", "日本经济", "日本哲学",
     "日本美术", "日本电影", "日本建筑",
-    # 语言
     "日语", "日文",
-    # 留学/交流
     "日本留学", "赴日", "日中", "中日", "日本研究", "东亚研究",
-    # 文化体验
     "茶道", "花道", "和服", "日本传统", "和风", "禅",
-    # 英文
     "Japan", "Japanese", "Tokyo", "Kyoto", "East Asia",
 ]
 
-# 活动类型关键词 —— 判断是否是"活动/讲座"而非普通文章
+# 活动类型关键词
 ACTIVITY_KEYWORDS = [
     "讲座", "沙龙", "分享会", "研讨会", "论坛", "工作坊",
     "活动", "展览", "展会", "演出", "音乐会", "电影放映",
     "体验课", "公开课", "开放日", "见面会", "读书会",
     "预告", "活动预告", "学术活动", "会议", "年会",
     "workshop", "seminar", "lecture", "forum", "event",
+    "講座", "レクチャー", "セミナー", "イベント", "勉強会",
 ]
 
 # 报名/通知关键词
@@ -51,24 +46,17 @@ REGISTRATION_KEYWORDS = [
 ]
 
 # ============ 研究方法关键词配置 ============
-# 含这些词的讲座，不要求与日本/东亚相关，直接通过主题筛选
-# 只需满足：含研究方法词 + 含活动词 + (线上 或 北京)
 RESEARCH_METHOD_KEYWORDS = [
-    # 方法论通称
     "研究方法", "研究设计", "方法论", "质性研究", "量化研究",
     "混合方法", "田野调查", "民族志", "案例研究", "文献综述",
-    # 具体方法
     "访谈方法", "问卷设计", "话语分析", "内容分析", "比较研究",
     "文本分析", "档案研究", "口述历史", "数字人文",
-    # 写作/发表
     "学术写作", "论文写作", "投稿技巧", "期刊发表",
-    # 英文
     "research method", "methodology", "qualitative", "quantitative",
     "ethnography", "fieldwork", "discourse analysis",
 ]
 
 # ============ 重点账号配置 ============
-# 这些账号的文章不强制要求含"北京"，直接通过地点筛选
 TRUSTED_SOURCES = [
     "公众号·东亚视界",
     "公众号·谓无名",
@@ -80,16 +68,13 @@ TRUSTED_SOURCES = [
 ]
 
 # ============ 地点筛选配置 ============
-# 线下活动限定城市
 OFFLINE_CITIES = ["北京", "Beijing", "BJ", "beijing"]
 
-# 线上活动关键词
 ONLINE_KEYWORDS = [
     "线上", "online", "直播", "腾讯会议", "zoom",
     "bilibili", "B站", "云端", "网络", "远程",
 ]
 
-# 是否只推送北京/线上活动（对非重点账号生效）
 ONLY_BEIJING_ONLINE = True
 
 # ============ 信息来源配置 ============
@@ -101,14 +86,13 @@ PUBLIC_ACCOUNTS = [
 
 XIAOHONGSHU = {
     "enabled": True,
-    "keywords": ["日本文化讲座 北京", "东亚研究 活动", "日语讲座", "日本留学分享"],
+    "keywords": ["日本文化讲座", "东亚研究 活动", "日语讲座", "日本留学分享"],
     "search_limit": 20
 }
 
-# 真实活动平台（直接抓取）
 EVENT_PLATFORMS = [
     {
-        "name": "豆瓣同城·北京日本文化",
+        "name": "豆瓣同城·日本",
         "url": "https://www.douban.com/location/beijing/events/rec/?tag=%E6%97%A5%E6%9C%AC",
         "type": "douban"
     },
@@ -117,32 +101,59 @@ EVENT_PLATFORMS = [
         "url": "https://www.huodongxing.com/search?k=%E6%97%A5%E6%9C%AC%E6%96%87%E5%8C%96&city=1",
         "type": "huodongxing"
     },
-    {
-        "name": "活动行·日语讲座",
-        "url": "https://www.huodongxing.com/search?k=%E6%97%A5%E8%AF%AD%E8%AE%B2%E5%BA%A7&city=1",
-        "type": "huodongxing"
-    },
 ]
 
-# 百度/必应搜索关键词（网页模块兜底用）
-WEB_SEARCH_KEYWORDS = [
-    # 日本/东亚相关（北京线下）
-    "北京 日本文化讲座 2026",
-    "北京 东亚研究 讲座 活动",
-    "北京 日语公开课 活动",
-    "北京 日本展览 2026",
-    # 日本/东亚相关（线上，不限地点）
-    "线上 日本历史讲座",
-    "线上 日本文学 分享",
-    "线上 东亚研究 讲座",
-    "线上 日语 公开课",
-    # 研究方法（不限日本，线上或北京）
-    "线上 研究方法 讲座 2026",
-    "线上 学术写作 讲座",
-    "线上 质性研究 方法论 讲座",
-    "北京 研究方法 工作坊 2026",
-    "线上 数字人文 讲座",
+# ============ 三路搜索引擎关键词 ============
+
+# 百度专用（中文为主）
+BAIDU_SEARCH_KEYWORDS = [
+    "日本 讲座 2026",
+    "日本文化 讲座 报名",
+    "日本历史 讲座",
+    "日本文学 讲座 分享会",
+    "东亚研究 讲座 2026",
+    "日语 公开课 报名",
+    "日本思想 研讨会",
+    "日本社会 学术讲座",
+    "日本艺术 讲座 活动",
+    "研究方法 讲座 2026",
+    "质性研究 方法论 讲座",
+    "学术写作 讲座 报名",
+    "数字人文 讲座",
 ]
+
+# 必应专用（英文+日文）
+BING_SEARCH_KEYWORDS = [
+    "Japan lecture 2026",
+    "Japanese culture lecture event",
+    "Japan history seminar 2026",
+    "East Asia lecture series",
+    "Japanese literature talk",
+    "Japan studies workshop 2026",
+    "Japanese language lecture free",
+    "research methodology lecture 2026",
+    "qualitative research workshop",
+    "academic writing seminar",
+    "日本 講座 2026",
+    "日本文化 レクチャー",
+    "東アジア 講演会 2026",
+    "日本語 公開講座",
+    "日本史 講座 無料",
+]
+
+# 搜狗微信专用（公众号文章）
+SOGOU_WEIXIN_KEYWORDS = [
+    "日本 讲座 报名",
+    "日本文化 活动预告",
+    "东亚研究 讲座预告",
+    "日语 公开课",
+    "日本 研讨会 2026",
+    "研究方法 讲座",
+    "学术写作 工作坊",
+]
+
+# 兼容旧版
+WEB_SEARCH_KEYWORDS = BAIDU_SEARCH_KEYWORDS + BING_SEARCH_KEYWORDS[:5]
 
 # ============ 采集配置 ============
 REQUEST_DELAY = 2
