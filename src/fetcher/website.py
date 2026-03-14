@@ -46,14 +46,14 @@ def _is_likely_expired(text: str) -> bool:
     """
     判断文章/标题里的日期是否已过期
     策略：提取所有可识别的日期，取最晚的一个来判断
-    - 最晚日期超过7天前 → 过期
+    - 最晚日期早于今天 → 过期（只保留今天及以后的活动）
     - 无法解析任何日期 → 保留（不丢弃）
     """
     if not text:
         return False
 
     now = datetime.now()
-    cutoff = now - timedelta(days=7)
+    today = datetime(now.year, now.month, now.day)  # 今天零点
     candidates = []
 
     # 模式1：年月日
@@ -71,7 +71,7 @@ def _is_likely_expired(text: str) -> bool:
             mo, d = int(m[0]), int(m[1])
             if 1 <= mo <= 12 and 1 <= d <= 31:
                 dt_this = datetime(now.year, mo, d)
-                if dt_this < cutoff:
+                if dt_this < today:
                     # 今年已过期，试试是否是明年的
                     dt_next = datetime(now.year + 1, mo, d)
                     candidates.append(dt_next)
@@ -83,9 +83,9 @@ def _is_likely_expired(text: str) -> bool:
     if not candidates:
         return False  # 无日期信息，保留
 
-    # 取最晚日期来判断
+    # 取最晚日期来判断，早于今天则过期
     latest = max(candidates)
-    return latest < cutoff
+    return latest < today
 
 
 class WebsiteFetcher:
